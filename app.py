@@ -47,21 +47,26 @@ def process_links(message):
 
     for part in parts:
         # Kiểm tra tên miền bắt đầu bằng s.shopee.vn hoặc shope.ee
-        if part.startswith("https://s.shopee.vn") or part.startswith("https://shope.ee"):
-            # Lấy link cuối cùng nếu là tên miền hợp lệ
+        if part.startswith("https://s.shopee.vn"):
+            # Lấy link cuối cùng nếu là tên miền s.shopee.vn
             final_url = get_final_link(part)
             
-            # Đảm bảo rằng link cuối cùng là hợp lệ
-            if final_url.startswith("https://shopee.vn/") or final_url.startswith("https://shope.ee/"):
+            if final_url.startswith("https://shopee.vn/"):
                 # Chỉ giữ lại tên miền và đường dẫn của link cuối cùng
-                origin_link = final_url.split("?")[0]  # Bỏ đi các tham số sau '?'
+                origin_link = final_url.split("?")[0]
                 # Tạo liên kết cuối
                 result_link = f"https://shope.ee/an_redir?origin_link={origin_link}&affiliate_id=17305270177&sub_id=huong"
                 result.append(result_link)
             else:
-                result.append(part)  # Nếu không hợp lệ thì giữ nguyên link
+                result.append(part)
+                
+        elif part.startswith("https://shope.ee"):
+            # Đối với shope.ee, giữ nguyên link gốc trong kết quả
+            result_link = f"https://shope.ee/an_redir?origin_link={part}&affiliate_id=17305270177&sub_id=huong"
+            result.append(result_link)
+        
         else:
-            result.append(part)  # Giữ nguyên các phần khác không phải là link
+            result.append(part)
 
     return " ".join(result)
 
