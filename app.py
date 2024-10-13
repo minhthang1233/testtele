@@ -1,13 +1,31 @@
-from flask import Flask, request
+from flask import Flask, request, jsonify
 import requests
+import os
 
 app = Flask(__name__)
 
-# Hàm mở rộng liên kết Lazada
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    data = request.get_json()
+    
+    # Kiểm tra xem tin nhắn có trong dữ liệu hay không
+    if 'message' in data and 'text' in data['message']:
+        user_message = data['message']['text']
+        print(f"Received message: {user_message}")  # Ghi lại tin nhắn nhận được
+        
+        # Kiểm tra nếu tin nhắn có liên kết Lazada
+        if "lazada" in user_message:
+            expanded_link = expand_lazada_link(user_message)
+            print(f"Expanded link: {expanded_link}")  # Ghi lại liên kết mở rộng
+            return jsonify({"text": f"Expanded link: {expanded_link}"}), 200
+
+    return jsonify({"text": "No valid Lazada link found."}), 200
+
 def expand_lazada_link(short_link):
     try:
         # Gửi yêu cầu GET đến liên kết ngắn
-        response = requests.get(short_link, allow_redirects=True)
+        response = requests.get(short_link, allow_redirects=True, timeout=10)
+        
         # Kiểm tra nếu có redirect
         if response.history:
             # Trả về URL cuối cùng sau tất cả các redirect
@@ -19,40 +37,5 @@ def expand_lazada_link(short_link):
         print(f"Error expanding link: {e}")
         return short_link
 
-# Đường dẫn webhook
-@app.route('/webhook', methods=['POST'])
-def webhook():
-    data = request.get_json()
-    
-    # Lấy thông tin tin nhắn từ webhook
-    message = data.get('message')
-    chat_id = message.get('chat', {}).get('id')
-    text = message.get('text')
-    
-    if text:
-        # Kiểm tra xem có phải là liên kết Lazada không
-        if "lazada" in text:
-            # Mở rộng liên kết
-            full_link = expand_lazada_link(text)
-            reply_text = f"Full link: {full_link}"
-        else:
-            reply_text = "Please send a Lazada link."
-        
-        # Gửi phản hồi trở lại
-        send_message(chat_id, reply_text)
-
-    return '', 200
-
-# Hàm gửi tin nhắn trở lại Telegram
-def send_message(chat_id, text):
-    token = '7628217923:AAE1nGUDGxhPLmVr0fYyAcz7b88N8LOsMZ0'  # Thay 'YOUR_TELEGRAM_BOT_TOKEN' bằng token bot của bạn
-    url = f'https://api.telegram.org/bot{token}/sendMessage'
-    data = {
-        'chat_id': chat_id,
-        'text': text,
-        'parse_mode': 'Markdown'  # Sử dụng Markdown để định dạng tin nhắn (tùy chọn)
-    }
-    requests.post(url, json=data)
-
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
