@@ -30,7 +30,7 @@ def webhook():
 
 def expand_lazada_link(short_link):
     """Hàm chuyển đổi link rút gọn Lazada thành link đầy đủ bằng cách mở rộng liên kết"""
-    response = requests.head(short_link, allow_redirects=True)
+    response = requests.get(short_link, allow_redirects=True)  # Thay đổi từ requests.head sang requests.get
     return response.url
 
 def convert_to_full_lazada_link(expanded_link):
