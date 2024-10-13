@@ -70,26 +70,24 @@ def process_links(message):
     converted_message = []
     
     for part in parts:
-        # Kiểm tra nếu liên kết bắt đầu bằng 's.shopee.vn' hoặc 'shope.ee'
+        # Tự động thêm tiền tố https:// nếu liên kết bắt đầu bằng s.shopee.vn hoặc shope.ee mà không có tiền tố
         if part.startswith("s.shopee.vn") or part.startswith("shope.ee"):
-            # Tự động thêm tiền tố https:// nếu thiếu
             if not part.startswith("http://") and not part.startswith("https://"):
                 part = "https://" + part
-
-        # Nếu không phải là liên kết hợp lệ của Shopee
-        if not (part.startswith("https://s.shopee.vn") or part.startswith("https://shope.ee")):
-            converted_message.append(part)
-        else:
+        
+        # Kiểm tra xem liên kết có hợp lệ không
+        if part.startswith("https://s.shopee.vn") or part.startswith("https://shope.ee"):
             # Lấy link cuối cùng
             final_url = get_final_link(part)
             origin_link = final_url.split("?")[0]  # Bỏ đi các tham số sau '?'
-
+            
             # Trả về link shope.ee với định dạng yêu cầu và loại bỏ tham số không mong muốn
             filtered_params = filter_unwanted_parameters(final_url)  # Lọc các tham số không mong muốn
             result_link = f"https://shope.ee/an_redir?origin_link={origin_link}{filtered_params}&affiliate_id=17305270177&sub_id=huong"
-            
             converted_message.append(result_link)
-    
+        else:
+            converted_message.append(part)  # Nếu không phải liên kết hợp lệ, giữ nguyên
+
     # Nếu không có liên kết hợp lệ
     if not any(link.startswith("https://s.shopee.vn") or link.startswith("https://shope.ee") for link in parts):
         return "Vui lòng nhập link bắt đầu bằng s.shopee.vn hoặc shope.ee. Những link khác gửi thẳng vào nhóm => https://zalo.me/g/rycduw016"
