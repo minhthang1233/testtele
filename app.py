@@ -46,6 +46,7 @@ def process_links(message):
     result = []
 
     for part in parts:
+        # Kiểm tra tên miền bắt đầu bằng s.shopee.vn hoặc shope.ee
         if part.startswith("https://s.shopee.vn") or part.startswith("https://shope.ee"):
             # Lấy link cuối cùng nếu là tên miền hợp lệ
             final_url = get_final_link(part)
