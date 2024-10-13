@@ -24,7 +24,7 @@ def webhook():
 
 # Hàm gửi tin nhắn đến bot Telegram
 def send_message(chat_id, text):
-    url = f"https://api.telegram.org/bot7628217923:AAE1nGUDGxhPLmVr0fYyAcz7b88N8LOsMZ0/sendMessage"
+    url = f"https://api.telegram.org/bot7725120534:AAF_NpkDpwYx0b3ritpvvjM3LbaUPayvlCA/sendMessage"
     payload = {
         "chat_id": chat_id,
         "text": text
@@ -44,10 +44,12 @@ def get_final_link(link):
 def process_links(message):
     parts = message.split(" ")
     result = []
+    has_valid_link = False
 
     for part in parts:
         # Kiểm tra tên miền bắt đầu bằng s.shopee.vn hoặc shope.ee
         if part.startswith("https://s.shopee.vn"):
+            has_valid_link = True
             # Lấy link cuối cùng nếu là tên miền s.shopee.vn
             final_url = get_final_link(part)
             
@@ -61,12 +63,17 @@ def process_links(message):
                 result.append(part)
                 
         elif part.startswith("https://shope.ee"):
+            has_valid_link = True
             # Đối với shope.ee, giữ nguyên link gốc trong kết quả
             result_link = f"https://shope.ee/an_redir?origin_link={part}&affiliate_id=17305270177&sub_id=huong"
             result.append(result_link)
         
         else:
             result.append(part)
+
+    # Nếu không có bất kỳ liên kết hợp lệ nào, trả về thông báo yêu cầu
+    if not has_valid_link:
+        return "Vui lòng nhập link bắt đầu bằng s.shopee.vn hoặc shope.ee.\nNhững link khác gửi thẳng vào nhóm => https://zalo.me/g/rycduw016"
 
     return " ".join(result)
 
