@@ -1,48 +1,39 @@
-from flask import Flask, request, jsonify
 import requests
-import os
+from flask import Flask, request
+import telebot
 
+# Khởi tạo Flask app và bot Telegram
 app = Flask(__name__)
+bot_token = '7628217923:AAE1nGUDGxhPLmVr0fYyAcz7b88N8LOsMZ0'  # Thay thế bằng token bot của bạn
+bot = telebot.TeleBot(bot_token)
 
-# Token bot Telegram của bạn
-TELEGRAM_BOT_TOKEN = '7628217923:AAE1nGUDGxhPLmVr0fYyAcz7b88N8LOsMZ0'
-TELEGRAM_API_URL = f'https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/'
-
-@app.route('/webhook', methods=['POST'])
-def webhook():
-    data = request.get_json()
-
-    # Kiểm tra nếu không có dữ liệu
-    if 'message' not in data:
-        return jsonify({"error": "No message found"}), 400
-
-    chat_id = data['message']['chat']['id']
-    text = data['message'].get('text', '')
-
-    # Kiểm tra nếu tin nhắn chứa link ngắn
-    if 'lazada.vn' in text:
-        long_link = expand_link(text)
-        send_message(chat_id, long_link)
-    else:
-        send_message(chat_id, "Vui lòng gửi link Lazada ngắn để chuyển đổi.")
-
-    return jsonify({"status": "success"}), 200
-
+# Hàm mở rộng link
 def expand_link(short_url):
     try:
-        response = requests.get(short_url, allow_redirects=False)
-        # Lấy URL đầy đủ từ phản hồi
-        if response.status_code == 302:
-            return response.headers['Location']
-        else:
-            return "Không thể mở rộng liên kết."
+        # Gửi yêu cầu tới link ngắn với allow_redirects=True để tự động theo dõi chuyển hướng
+        response = requests.get(short_url, allow_redirects=True)
+        # Trả về URL cuối cùng
+        return response.url if response.status_code == 200 else "Không thể mở rộng liên kết."
     except Exception as e:
         return f"Lỗi: {str(e)}"
 
-def send_message(chat_id, text):
-    url = TELEGRAM_API_URL + 'sendMessage'
-    payload = {'chat_id': chat_id, 'text': text}
-    requests.post(url, json=payload)
+# Xử lý khi có tin nhắn gửi đến bot
+@bot.message_handler(commands=['start'])
+def send_welcome(message):
+    bot.reply_to(message, "Chào mừng bạn! Gửi một link ngắn Lazada và tôi sẽ mở rộng nó cho bạn.")
+
+@bot.message_handler(func=lambda message: True)
+def handle_message(message):
+    short_url = message.text
+    expanded_url = expand_link(short_url)
+    bot.reply_to(message, expanded_url)
+
+# Xử lý webhook từ Telegram
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    update = request.get_data(as_text=True)
+    bot.process_new_updates([telebot.types.Update.de_json(update)])
+    return "OK", 200
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run()
