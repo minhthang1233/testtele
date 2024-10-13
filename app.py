@@ -34,7 +34,7 @@ def expand_lazada_link(short_link):
 def send_message(chat_id, text):
     """Gửi tin nhắn qua Telegram"""
     token = 'your-telegram-bot-token-here'  # Thay thế bằng token bot của bạn
-    url = f'https://api.telegram.org/bot{token}/sendMessage'
+    url = f'https://api.telegram.org/bot7628217923:AAE1nGUDGxhPLmVr0fYyAcz7b88N8LOsMZ0/sendMessage'
     payload = {
         'chat_id': chat_id,
         'text': text
