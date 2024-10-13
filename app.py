@@ -9,7 +9,10 @@ app = Flask(__name__)
 logging.basicConfig(level=logging.DEBUG)
 
 # Token bot Telegram
-TOKEN = os.environ.get('7628217923:AAE1nGUDGxhPLmVr0fYyAcz7b88N8LOsMZ0')  # Đảm bảo đã thiết lập biến môi trường này trên Heroku
+TOKEN = os.environ.get('BOT_TOKEN')  # Đảm bảo đã thiết lập biến môi trường này trên Heroku
+if TOKEN is None:
+    logging.error("BOT_TOKEN is not set.")
+    raise ValueError("BOT_TOKEN must be set in environment variables.")
 BASE_URL = f"https://api.telegram.org/bot{TOKEN}/"
 
 @app.route('/' + TOKEN, methods=['POST'])
@@ -29,7 +32,6 @@ def webhook():
     return '', 200
 
 def convert_link(short_link):
-    # Thực hiện yêu cầu HTTP đến liên kết rút gọn để lấy liên kết đầy đủ
     try:
         response = requests.get(short_link, allow_redirects=False)
         if response.status_code == 302:
