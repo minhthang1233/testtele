@@ -29,20 +29,28 @@ def webhook():
         return "ok", 200
 
 def expand_lazada_link(short_link):
-    """Hàm chuyển đổi link rút gọn Lazada thành link đầy đủ bằng cách mở rộng liên kết"""
-    response = requests.get(short_link, allow_redirects=True)  # Thay đổi từ requests.head sang requests.get
-    return response.url
+    """Hàm mở rộng link rút gọn Lazada để lấy link đầy đủ."""
+    try:
+        response = requests.get(short_link, allow_redirects=True)
+        response.raise_for_status()  # Kiểm tra xem yêu cầu có thành công không
+        return response.url  # Trả về URL cuối cùng
+    except requests.RequestException as e:
+        print(f"Error expanding link: {e}")
+        return None  # Trả về None nếu có lỗi
 
 def convert_to_full_lazada_link(expanded_link):
-    """Hàm chuyển đổi link đầy đủ thành link Lazada có mã affiliate"""
-    affiliate_id = 'ktheme'  # Thay thế bằng mã affiliate của bạn
-    # Sử dụng urllib để mã hóa URL thành định dạng đúng
-    encoded_url = quote(expanded_link, safe='')
-    full_link = f"https://c.lazada.vn/t/c.Ywv1?url={encoded_url}&sub_aff_id={affiliate_id}"
-    return full_link
+    """Hàm tạo link Lazada đầy đủ với mã affiliate."""
+    if expanded_link:
+        affiliate_id = 'ktheme'  # Thay thế bằng mã affiliate của bạn
+        # Mã hóa URL đầy đủ để sử dụng trong link
+        encoded_url = quote(expanded_link, safe='')
+        full_link = f"https://c.lazada.vn/t/c.Ywv1?url={encoded_url}&sub_aff_id={affiliate_id}"
+        return full_link
+    else:
+        return "Could not retrieve the expanded link."  # Thông báo lỗi
 
 def send_message(chat_id, text):
-    """Gửi tin nhắn qua Telegram"""
+    """Gửi tin nhắn qua Telegram."""
     token = '7628217923:AAE1nGUDGxhPLmVr0fYyAcz7b88N8LOsMZ0'  # Thay thế bằng token bot của bạn
     url = f'https://api.telegram.org/bot{token}/sendMessage'
     payload = {
