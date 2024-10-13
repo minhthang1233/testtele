@@ -1,4 +1,4 @@
-Flask==2.0.1
-python-telegram-bot==20.3
-gunicorn
+Flask==2.0.3
+Werkzeug==2.0.3
 requests
+gunicorn
