@@ -14,14 +14,13 @@ def index():
 def webhook():
     if request.method == 'POST':
         data = request.json
-        # Kiểm tra xem có dữ liệu từ Telegram gửi về không
         if 'message' in data and 'text' in data['message']:
             chat_id = data['message']['chat']['id']
             message = data['message']['text']
 
-            # Xử lý nếu tin nhắn là link rút gọn Lazada
             if "https://s.lazada.vn/" in message:
                 expanded_link = expand_lazada_link(message)
+                print("Expanded link:", expanded_link)  # Kiểm tra liên kết mở rộng
                 if expanded_link:
                     full_link = convert_to_full_lazada_link(expanded_link)
                     send_message(chat_id, full_link)
@@ -34,7 +33,6 @@ def webhook():
 def expand_lazada_link(short_link):
     """Hàm mở rộng link rút gọn Lazada để lấy link đầy đủ."""
     try:
-        # Gửi yêu cầu GET đến link rút gọn
         response = requests.get(short_link, allow_redirects=True)
         response.raise_for_status()  # Kiểm tra xem yêu cầu có thành công không
         return response.url  # Trả về URL cuối cùng
@@ -45,10 +43,12 @@ def expand_lazada_link(short_link):
 def convert_to_full_lazada_link(expanded_link):
     """Hàm tạo link Lazada đầy đủ với mã affiliate."""
     if expanded_link:
+        # Phân tích expanded_link để lấy sản phẩm nếu cần
+        # Bạn có thể cần kiểm tra để xác nhận URL có chứa sản phẩm không.
         affiliate_id = 'ktheme'  # Thay thế bằng mã affiliate của bạn
-        # Mã hóa URL đầy đủ để sử dụng trong link
         encoded_url = quote(expanded_link, safe='')
         full_link = f"https://c.lazada.vn/t/c.Ywv1?url={encoded_url}&sub_aff_id={affiliate_id}"
+        print("Full link:", full_link)  # Kiểm tra liên kết hoàn chỉnh
         return full_link
     else:
         return None  # Trả về None nếu không lấy được liên kết
