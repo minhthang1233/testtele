@@ -77,15 +77,15 @@ def process_links(message):
             # Lấy link cuối cùng
             final_url = get_final_link(part)
             origin_link = final_url.split("?")[0]  # Bỏ đi các tham số sau '?'
-
+            
             # Trả về link shope.ee với định dạng yêu cầu và loại bỏ tham số không mong muốn
             filtered_params = filter_unwanted_parameters(final_url)  # Lọc các tham số không mong muốn
             
-            # Kiểm tra xem final_url có chứa 'product' hay không
-            if 'product' in final_url:
-                result_link = f"https://shope.ee/an_redir?origin_link={origin_link}{filtered_params}&affiliate_id=17305270177&sub_id=huong"
-            else:
+            # Kiểm tra xem final_url có chứa 'error_page' hay không
+            if 'error_page' in final_url:
                 result_link = f"https://shope.ee/an_redir?origin_link={origin_link}&affiliate_id=17305270177&sub_id=huong"
+            else:
+                result_link = f"https://shope.ee/an_redir?origin_link={origin_link}{filtered_params}&affiliate_id=17305270177&sub_id=huong"
             
             converted_message.append(result_link)
     
