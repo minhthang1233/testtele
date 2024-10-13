@@ -42,12 +42,11 @@ def get_final_link(link):
 
 # Hàm lọc các tham số không mong muốn
 def filter_unwanted_parameters(url):
-    # Các tham số không mong muốn
-    unwanted_params = [
-        "af_viewthrough_lookback",
-        "is_retargeting",
-        "pid",
-        "af_term"
+    # Các tham số cần giữ lại
+    allowed_params = [
+        "origin_link",
+        "affiliate_id",
+        "sub_id"
     ]
     
     url_parts = url.split('?')
@@ -58,8 +57,8 @@ def filter_unwanted_parameters(url):
     base_url = url_parts[0]
     params = url_parts[1].split('&')
     
-    # Chỉ giữ lại các tham số không bị loại bỏ
-    filtered_params = [param for param in params if not any(param.startswith(unwanted) for unwanted in unwanted_params)]
+    # Chỉ giữ lại các tham số được phép
+    filtered_params = [param for param in params if any(param.startswith(allowed) for allowed in allowed_params)]
     
     # Tạo lại URL
     if filtered_params:
@@ -85,7 +84,7 @@ def process_links(message):
             else:
                 # Trả về link shope.ee với định dạng yêu cầu và loại bỏ tham số không mong muốn
                 final_url = filter_unwanted_parameters(final_url)
-                result_link = f"https://shope.ee/an_redir?origin_link={final_url}&affiliate_id=17305270177&sub_id=huong"
+                result_link = f"https://shope.ee/an_redir?{final_url}&affiliate_id=17305270177&sub_id=huong"
                 
             converted_message.append(result_link)
     
