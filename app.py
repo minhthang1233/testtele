@@ -1,39 +1,50 @@
+from flask import Flask, request, jsonify
 import requests
-from flask import Flask, request
-import telebot
 
-# Khởi tạo Flask app và bot Telegram
 app = Flask(__name__)
-bot_token = '7628217923:AAE1nGUDGxhPLmVr0fYyAcz7b88N8LOsMZ0'  # Thay thế bằng token bot của bạn
-bot = telebot.TeleBot(bot_token)
 
-# Hàm mở rộng link
-def expand_link(short_url):
-    try:
-        # Gửi yêu cầu tới link ngắn với allow_redirects=True để tự động theo dõi chuyển hướng
-        response = requests.get(short_url, allow_redirects=True)
-        # Trả về URL cuối cùng
-        return response.url if response.status_code == 200 else "Không thể mở rộng liên kết."
-    except Exception as e:
-        return f"Lỗi: {str(e)}"
+@app.route('/')
+def home():
+    return "Bot is running!"
 
-# Xử lý khi có tin nhắn gửi đến bot
-@bot.message_handler(commands=['start'])
-def send_welcome(message):
-    bot.reply_to(message, "Chào mừng bạn! Gửi một link ngắn Lazada và tôi sẽ mở rộng nó cho bạn.")
-
-@bot.message_handler(func=lambda message: True)
-def handle_message(message):
-    short_url = message.text
-    expanded_url = expand_link(short_url)
-    bot.reply_to(message, expanded_url)
-
-# Xử lý webhook từ Telegram
 @app.route('/webhook', methods=['POST'])
 def webhook():
-    update = request.get_data(as_text=True)
-    bot.process_new_updates([telebot.types.Update.de_json(update)])
-    return "OK", 200
+    data = request.get_json()
+
+    if 'message' in data:
+        chat_id = data['message']['chat']['id']
+        text = data['message']['text']
+
+        if text.startswith("https://s.lazada.vn/"):
+            full_link = expand_link(text)
+            response_text = full_link if full_link else "Không thể mở rộng liên kết."
+        else:
+            response_text = "Vui lòng gửi liên kết Lazada hợp lệ."
+
+        send_message(chat_id, response_text)
+
+    return jsonify({'status': 'ok'})
+
+def expand_link(short_link):
+    try:
+        response = requests.get(short_link, allow_redirects=False)
+        if response.status_code == 302:
+            return response.headers['Location']
+        else:
+            return None
+    except Exception as e:
+        print(f"Error: {e}")
+        return None
+
+def send_message(chat_id, text):
+    # Thay 'YOUR_BOT_TOKEN' bằng token của bot Telegram của bạn
+    token = '7628217923:AAE1nGUDGxhPLmVr0fYyAcz7b88N8LOsMZ0'
+    url = f'https://api.telegram.org/bot{token}/sendMessage'
+    payload = {
+        'chat_id': chat_id,
+        'text': text
+    }
+    requests.post(url, json=payload)
 
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True)
