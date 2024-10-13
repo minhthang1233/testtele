@@ -21,15 +21,22 @@ def webhook():
             # Xử lý nếu tin nhắn là link rút gọn Lazada
             if "https://s.lazada.vn/" in message:
                 expanded_link = expand_lazada_link(message)
-                send_message(chat_id, expanded_link)
+                full_link = convert_to_full_lazada_link(expanded_link)
+                send_message(chat_id, full_link)
             else:
                 send_message(chat_id, "Please send a valid Lazada short link.")
         return "ok", 200
 
 def expand_lazada_link(short_link):
-    """Hàm chuyển đổi link rút gọn Lazada thành link đầy đủ"""
+    """Hàm chuyển đổi link rút gọn Lazada thành link đầy đủ bằng cách mở rộng liên kết"""
     response = requests.head(short_link, allow_redirects=True)
     return response.url
+
+def convert_to_full_lazada_link(expanded_link):
+    """Hàm chuyển đổi link đầy đủ thành link Lazada có mã affiliate"""
+    affiliate_id = 'AFFILIATE_ID'  # Thay thế bằng mã affiliate của bạn
+    full_link = f"https://c.lazada.vn/t/c.Ywv1?url={expanded_link}&sub_aff_id={affiliate_id}"
+    return full_link
 
 def send_message(chat_id, text):
     """Gửi tin nhắn qua Telegram"""
