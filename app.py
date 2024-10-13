@@ -60,9 +60,9 @@ def filter_unwanted_parameters(url):
     
     # Tạo lại URL
     if filtered_params:
-        return f"{base_url}?{'&'.join(filtered_params)}"
+        return f"?{'&'.join(filtered_params)}"
     else:
-        return base_url  # Nếu không còn tham số nào, trả về chỉ base_url
+        return ""  # Nếu không còn tham số nào, trả về rỗng
 
 # Hàm xử lý nhiều liên kết
 def process_links(message):
@@ -76,19 +76,12 @@ def process_links(message):
         else:
             # Lấy link cuối cùng
             final_url = get_final_link(part)
-            if part.startswith("https://s.shopee.vn"):
-                origin_link = final_url.split("?")[0]  # Bỏ đi các tham số sau '?'
-                result_link = f"https://shope.ee/an_redir?origin_link={origin_link}&affiliate_id=17305270177&sub_id=huong"
-            else:
-                # Trả về link shope.ee với định dạng yêu cầu và loại bỏ tham số không mong muốn
-                final_url_with_params = get_final_link(part)  # Lấy final_url có các tham số
-                origin_link = final_url_with_params.split("?")[0]  # Lấy base_url
-                additional_params = final_url_with_params.split("?")[1] if "?" in final_url_with_params else ""
-                
-                # Lọc và thêm tham số cần thiết
-                filtered_params = filter_unwanted_parameters(final_url_with_params)
-                result_link = f"https://shope.ee/an_redir?origin_link={origin_link}{filtered_params}&affiliate_id=17305270177&sub_id=huong"
-                
+            origin_link = final_url.split("?")[0]  # Bỏ đi các tham số sau '?'
+
+            # Trả về link shope.ee với định dạng yêu cầu và loại bỏ tham số không mong muốn
+            filtered_params = filter_unwanted_parameters(final_url)  # Lọc các tham số không mong muốn
+            result_link = f"https://shope.ee/an_redir?origin_link={origin_link}{filtered_params}&affiliate_id=17305270177&sub_id=huong"
+            
             converted_message.append(result_link)
     
     # Nếu không có liên kết hợp lệ
