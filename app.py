@@ -1,50 +1,57 @@
-from flask import Flask, request, jsonify
+import os
+import logging
 import requests
+from flask import Flask, request
 
 app = Flask(__name__)
 
-@app.route('/')
-def home():
-    return "Bot is running!"
+# Cấu hình logging
+logging.basicConfig(level=logging.DEBUG)
 
-@app.route('/webhook', methods=['POST'])
+# Token bot Telegram
+TOKEN = os.environ.get('7628217923:AAE1nGUDGxhPLmVr0fYyAcz7b88N8LOsMZ0')  # Đảm bảo đã thiết lập biến môi trường này trên Heroku
+BASE_URL = f"https://api.telegram.org/bot{TOKEN}/"
+
+@app.route('/' + TOKEN, methods=['POST'])
 def webhook():
-    data = request.get_json()
+    update = request.get_json()
+    logging.debug(f"Received update: {update}")
+    
+    chat_id = update['message']['chat']['id']
+    message_text = update['message']['text']
 
-    if 'message' in data:
-        chat_id = data['message']['chat']['id']
-        text = data['message']['text']
+    if message_text.startswith('https://s.lazada.vn'):
+        full_link = convert_link(message_text)
+        send_message(chat_id, full_link)
+    else:
+        send_message(chat_id, "Liên kết không hợp lệ. Vui lòng gửi liên kết Lazada.")
 
-        if text.startswith("https://s.lazada.vn/"):
-            full_link = expand_link(text)
-            response_text = full_link if full_link else "Không thể mở rộng liên kết."
-        else:
-            response_text = "Vui lòng gửi liên kết Lazada hợp lệ."
+    return '', 200
 
-        send_message(chat_id, response_text)
-
-    return jsonify({'status': 'ok'})
-
-def expand_link(short_link):
+def convert_link(short_link):
+    # Thực hiện yêu cầu HTTP đến liên kết rút gọn để lấy liên kết đầy đủ
     try:
         response = requests.get(short_link, allow_redirects=False)
         if response.status_code == 302:
             return response.headers['Location']
         else:
-            return None
+            return "Không thể mở rộng liên kết."
     except Exception as e:
-        print(f"Error: {e}")
-        return None
+        logging.error(f"Error in converting link: {e}")
+        return "Có lỗi xảy ra khi mở rộng liên kết."
 
 def send_message(chat_id, text):
-    # Thay 'YOUR_BOT_TOKEN' bằng token của bot Telegram của bạn
-    token = '7628217923:AAE1nGUDGxhPLmVr0fYyAcz7b88N8LOsMZ0'
-    url = f'https://api.telegram.org/bot{token}/sendMessage'
+    url = BASE_URL + 'sendMessage'
     payload = {
         'chat_id': chat_id,
-        'text': text
+        'text': text,
+        'parse_mode': 'Markdown'
     }
-    requests.post(url, json=payload)
+    try:
+        requests.post(url, json=payload)
+        logging.debug(f"Sent message: {text} to chat_id: {chat_id}")
+    except Exception as e:
+        logging.error(f"Error in sending message: {e}")
 
 if __name__ == '__main__':
     app.run(debug=True)
