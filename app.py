@@ -3,51 +3,56 @@ import requests
 
 app = Flask(__name__)
 
-# Trang chủ đơn giản
-@app.route('/')
-def index():
-    return "Hello! This is a Lazada link conversion bot."
+# Hàm mở rộng liên kết Lazada
+def expand_lazada_link(short_link):
+    try:
+        # Gửi yêu cầu GET đến liên kết ngắn
+        response = requests.get(short_link, allow_redirects=True)
+        # Kiểm tra nếu có redirect
+        if response.history:
+            # Trả về URL cuối cùng sau tất cả các redirect
+            return response.url
+        else:
+            # Nếu không có redirect, trả về liên kết ngắn ban đầu
+            return short_link
+    except requests.RequestException as e:
+        print(f"Error expanding link: {e}")
+        return short_link
 
-# Webhook để xử lý yêu cầu từ Telegram Bot
+# Đường dẫn webhook
 @app.route('/webhook', methods=['POST'])
 def webhook():
-    if request.method == 'POST':
-        data = request.json
-        # Kiểm tra xem có dữ liệu từ Telegram gửi về không
-        if 'message' in data and 'text' in data['message']:
-            chat_id = data['message']['chat']['id']
-            message = data['message']['text']
+    data = request.get_json()
+    
+    # Lấy thông tin tin nhắn từ webhook
+    message = data.get('message')
+    chat_id = message.get('chat', {}).get('id')
+    text = message.get('text')
+    
+    if text:
+        # Kiểm tra xem có phải là liên kết Lazada không
+        if "lazada" in text:
+            # Mở rộng liên kết
+            full_link = expand_lazada_link(text)
+            reply_text = f"Full link: {full_link}"
+        else:
+            reply_text = "Please send a Lazada link."
+        
+        # Gửi phản hồi trở lại
+        send_message(chat_id, reply_text)
 
-            # Xử lý nếu tin nhắn là link rút gọn Lazada
-            if "https://s.lazada.vn/" in message:
-                expanded_link = expand_lazada_link(message)
-                print(f"Expanded link: {expanded_link}")  # Log link mở rộng
-                # Gọi lại hàm để xác nhận rằng liên kết đã mở rộng tới liên kết cuối cùng
-                full_link = expand_lazada_link(expanded_link)
-                print(f"Full link: {full_link}")  # Log liên kết đầy đủ
-                send_message(chat_id, full_link)
-            else:
-                send_message(chat_id, "Please send a valid Lazada short link.")
-        return "ok", 200
+    return '', 200
 
-def expand_lazada_link(short_link):
-    """Hàm chuyển đổi link rút gọn Lazada thành link đầy đủ"""
-    try:
-        response = requests.get(short_link, allow_redirects=True)
-        return response.url
-    except requests.RequestException as e:
-        print(f"Error expanding link: {e}")  # Log lỗi nếu có
-        return short_link  # Trả về link gốc nếu có lỗi
-
+# Hàm gửi tin nhắn trở lại Telegram
 def send_message(chat_id, text):
-    """Gửi tin nhắn qua Telegram"""
-    token = '7628217923:AAE1nGUDGxhPLmVr0fYyAcz7b88N8LOsMZ0'  # Thay thế bằng token bot của bạn
+    token = '7628217923:AAE1nGUDGxhPLmVr0fYyAcz7b88N8LOsMZ0'  # Thay 'YOUR_TELEGRAM_BOT_TOKEN' bằng token bot của bạn
     url = f'https://api.telegram.org/bot{token}/sendMessage'
-    payload = {
+    data = {
         'chat_id': chat_id,
-        'text': text
+        'text': text,
+        'parse_mode': 'Markdown'  # Sử dụng Markdown để định dạng tin nhắn (tùy chọn)
     }
-    requests.post(url, json=payload)
+    requests.post(url, json=data)
 
 if __name__ == '__main__':
     app.run(debug=True)
