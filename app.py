@@ -1,59 +1,33 @@
-import os
-import logging
-import requests
 from flask import Flask, request
+import requests
+import os
 
 app = Flask(__name__)
 
-# Cấu hình logging
-logging.basicConfig(level=logging.DEBUG)
-
-# Token bot Telegram
-TOKEN = os.environ.get('BOT_TOKEN')  # Đảm bảo đã thiết lập biến môi trường này trên Heroku
-if TOKEN is None:
-    logging.error("BOT_TOKEN is not set.")
-    raise ValueError("BOT_TOKEN must be set in environment variables.")
-BASE_URL = f"https://api.telegram.org/bot{TOKEN}/"
+TOKEN = os.environ.get('TOKEN')
 
 @app.route('/' + TOKEN, methods=['POST'])
 def webhook():
     update = request.get_json()
-    logging.debug(f"Received update: {update}")
-    
     chat_id = update['message']['chat']['id']
-    message_text = update['message']['text']
+    text = update['message']['text']
 
-    if message_text.startswith('https://s.lazada.vn'):
-        full_link = convert_link(message_text)
-        send_message(chat_id, full_link)
+    if "lazada" in text:
+        text = convert_lazada_link(text)  # Hàm chuyển đổi link
     else:
-        send_message(chat_id, "Liên kết không hợp lệ. Vui lòng gửi liên kết Lazada.")
+        text = "Chỉ hỗ trợ link Lazada."
 
+    send_message(chat_id, text)
     return '', 200
 
-def convert_link(short_link):
-    try:
-        response = requests.get(short_link, allow_redirects=False)
-        if response.status_code == 302:
-            return response.headers['Location']
-        else:
-            return "Không thể mở rộng liên kết."
-    except Exception as e:
-        logging.error(f"Error in converting link: {e}")
-        return "Có lỗi xảy ra khi mở rộng liên kết."
-
 def send_message(chat_id, text):
-    url = BASE_URL + 'sendMessage'
-    payload = {
-        'chat_id': chat_id,
-        'text': text,
-        'parse_mode': 'Markdown'
-    }
-    try:
-        requests.post(url, json=payload)
-        logging.debug(f"Sent message: {text} to chat_id: {chat_id}")
-    except Exception as e:
-        logging.error(f"Error in sending message: {e}")
+    url = f'https://api.telegram.org/bot{TOKEN}/sendMessage'
+    payload = {'chat_id': chat_id, 'text': text}
+    requests.post(url, json=payload)
+
+def convert_lazada_link(text):
+    # Logic chuyển đổi link Lazada
+    return "Link đã chuyển đổi: " + text
 
 if __name__ == '__main__':
     app.run(debug=True)
