@@ -44,26 +44,25 @@ def get_final_link(link):
 def process_links(message):
     parts = message.split(" ")
     converted_message = []
-    has_valid_link = False
     
     for part in parts:
-        # Kiểm tra nếu phần đó là liên kết
-        if part.startswith("https://s.shopee.vn") or part.startswith("https://shope.ee"):
-            has_valid_link = True
+        # Nếu không phải là liên kết bắt đầu bằng s.shopee.vn hoặc shope.ee
+        if not (part.startswith("https://s.shopee.vn") or part.startswith("https://shope.ee")):
+            converted_message.append(part)
+        else:
             # Lấy link cuối cùng
             final_url = get_final_link(part)
             if part.startswith("https://s.shopee.vn"):
                 origin_link = final_url.split("?")[0]  # Bỏ đi các tham số sau '?'
                 result_link = f"https://shope.ee/an_redir?origin_link={origin_link}&affiliate_id=17305270177&sub_id=huong"
-            elif part.startswith("https://shope.ee"):
+            else:
                 # Trả về link shope.ee với định dạng yêu cầu
                 result_link = f"https://shope.ee/an_redir?origin_link={final_url}&affiliate_id=17305270177&sub_id=huong"
+                
             converted_message.append(result_link)
-        else:
-            converted_message.append(part)
     
     # Nếu không có liên kết hợp lệ
-    if not has_valid_link:
+    if not any(link.startswith("https://s.shopee.vn") or link.startswith("https://shope.ee") for link in parts):
         return "Vui lòng nhập link bắt đầu bằng s.shopee.vn hoặc shope.ee. Những link khác gửi thẳng vào nhóm => https://zalo.me/g/rycduw016"
     
     return " ".join(converted_message)
