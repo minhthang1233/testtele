@@ -1,5 +1,6 @@
 from flask import Flask, request
 import requests
+from urllib.parse import quote
 
 app = Flask(__name__)
 
@@ -34,8 +35,10 @@ def expand_lazada_link(short_link):
 
 def convert_to_full_lazada_link(expanded_link):
     """Hàm chuyển đổi link đầy đủ thành link Lazada có mã affiliate"""
-    affiliate_id = 'AFFILIATE_ID'  # Thay thế bằng mã affiliate của bạn
-    full_link = f"https://c.lazada.vn/t/c.Ywv1?url={expanded_link}&sub_aff_id={affiliate_id}"
+    affiliate_id = 'ktheme'  # Thay thế bằng mã affiliate của bạn
+    # Sử dụng urllib để mã hóa URL thành định dạng đúng
+    encoded_url = quote(expanded_link, safe='')
+    full_link = f"https://c.lazada.vn/t/c.Ywv1?url={encoded_url}&sub_aff_id={affiliate_id}"
     return full_link
 
 def send_message(chat_id, text):
