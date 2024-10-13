@@ -1,94 +1,66 @@
-from flask import Flask, request, jsonify
-import requests
 import os
+import requests
+from urllib.parse import quote
+from flask import Flask, request
+from telegram import Update
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
+# Khởi tạo ứng dụng Flask
 app = Flask(__name__)
 
-# Hàm xử lý webhook
-@app.route('/webhook', methods=['POST'])
-def webhook():
-    update = request.get_json()
-    
-    # Kiểm tra xem có tin nhắn mới không
-    if 'message' in update:
-        chat_id = update['message']['chat']['id']
-        message_text = update['message'].get('text', '')
+# Bot token từ BotFather
+BOT_TOKEN = os.getenv('BOT_TOKEN')
 
-        # Gọi hàm để xử lý liên kết
-        response_text = process_links(message_text)
-
-        # Gửi phản hồi về Telegram
-        send_message(chat_id, response_text)
-
-    return jsonify({"status": "ok"})
-
-# Hàm gửi tin nhắn đến bot Telegram
-def send_message(chat_id, text):
-    url = f"https://api.telegram.org/bot7628217923:AAE1nGUDGxhPLmVr0fYyAcz7b88N8LOsMZ0/sendMessage"
-    payload = {
-        "chat_id": chat_id,
-        "text": text
-    }
-    requests.post(url, json=payload)
-
-# Hàm lấy link cuối cùng từ URL
-def get_final_link(link):
+# Hàm chuyển đổi từ link ngắn sang link đầy đủ
+def convert_link(short_link):
     try:
-        # Gửi yêu cầu để lấy link cuối
-        response = requests.get(link, allow_redirects=True)
-        return response.url  # Trả về link cuối cùng
-    except requests.exceptions.RequestException as e:
-        return str(e)  # Trả về lỗi nếu có
+        # Thực hiện yêu cầu HEAD để lấy link đầy đủ
+        response = requests.head(short_link, allow_redirects=True)
+        full_url = response.url
 
-# Hàm lọc các tham số không mong muốn
-def filter_unwanted_parameters(url):
-    # Chỉ giữ lại tham số utm_source
-    allowed_params = [
-        "utm_source"
-    ]
-    
-    url_parts = url.split('?')
-    
-    if len(url_parts) < 2:
-        return url  # Không có tham số thì trả về nguyên URL
-    
-    base_url = url_parts[0]
-    params = url_parts[1].split('&')
-    
-    # Chỉ giữ lại các tham số được phép
-    filtered_params = [param for param in params if any(param.startswith(allowed) for allowed in allowed_params)]
-    
-    # Tạo lại URL
-    if filtered_params:
-        return f"?{'&'.join(filtered_params)}"
+        # Tạo link Lazada đầy đủ với affiliate
+        affiliate_id = "ktheme"  # Thay thế bằng ID tiếp thị liên kết của bạn
+        encoded_url = quote(full_url, safe='')
+        long_link = f"https://c.lazada.vn/t/c.Ywv1?url={encoded_url}&sub_aff_id={affiliate_id}"
+
+        return long_link
+    except Exception as e:
+        return f"Đã xảy ra lỗi: {str(e)}"
+
+# Hàm xử lý lệnh start
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Chào bạn! Gửi cho tôi một liên kết Lazada để tôi chuyển đổi nó!")
+
+# Hàm xử lý khi người dùng gửi link
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_message = update.message.text
+    if "https://s.lazada.vn/" in user_message:
+        converted_link = convert_link(user_message)
+        await update.message.reply_text(f"Liên kết đầy đủ: {converted_link}")
     else:
-        return ""  # Nếu không còn tham số nào, trả về rỗng
+        await update.message.reply_text("Vui lòng gửi một liên kết hợp lệ từ Lazada.")
 
-# Hàm xử lý nhiều liên kết
-def process_links(message):
-    parts = message.split(" ")
-    converted_message = []
-    
-    for part in parts:
-        # Nếu không phải là liên kết bắt đầu bằng s.shopee.vn hoặc shope.ee
-        if not (part.startswith("https://s.shopee.vn") or part.startswith("https://shope.ee")):
-            converted_message.append(part)
-        else:
-            # Lấy link cuối cùng
-            final_url = get_final_link(part)
-            origin_link = final_url.split("?")[0]  # Bỏ đi các tham số sau '?'
+# Khởi tạo bot Telegram
+async def telegram_bot():
+    application = ApplicationBuilder().token(BOT_TOKEN).build()
 
-            # Trả về link shope.ee với định dạng yêu cầu và loại bỏ tham số không mong muốn
-            filtered_params = filter_unwanted_parameters(final_url)  # Lọc các tham số không mong muốn
-            result_link = f"https://shope.ee/an_redir?origin_link={origin_link}{filtered_params}&affiliate_id=17305270177&sub_id=huong"
-            
-            converted_message.append(result_link)
-    
-    # Nếu không có liên kết hợp lệ
-    if not any(link.startswith("https://s.shopee.vn") or link.startswith("https://shope.ee") for link in parts):
-        return "Vui lòng nhập link bắt đầu bằng s.shopee.vn hoặc shope.ee. Những link khác gửi thẳng vào nhóm => https://zalo.me/g/rycduw016"
-    
-    return " ".join(converted_message)
+    # Thêm các handler cho bot
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("help", start))
+    application.add_handler(MessageHandler(filters.TEXT, handle_message))
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    await application.start()
+    await application.updater.idle()
+
+# Khởi động ứng dụng Flask
+@app.route('/')
+def index():
+    return "Bot đang chạy!"
+
+if __name__ == "__main__":
+    # Khởi động bot Telegram
+    import asyncio
+    asyncio.run(telegram_bot())
+    
+    # Khởi chạy Flask
+    app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)))
