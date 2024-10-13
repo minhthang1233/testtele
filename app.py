@@ -42,11 +42,9 @@ def get_final_link(link):
 
 # Hàm lọc các tham số không mong muốn
 def filter_unwanted_parameters(url):
-    # Các tham số cần giữ lại
+    # Chỉ giữ lại tham số utm_source
     allowed_params = [
-        "origin_link",
-        "affiliate_id",
-        "sub_id"
+        "utm_source"
     ]
     
     url_parts = url.split('?')
@@ -87,8 +85,9 @@ def process_links(message):
                 origin_link = final_url_with_params.split("?")[0]  # Lấy base_url
                 additional_params = final_url_with_params.split("?")[1] if "?" in final_url_with_params else ""
                 
-                # Thêm các tham số cần thiết vào kết quả
-                result_link = f"https://shope.ee/an_redir?origin_link={origin_link}?{additional_params}&affiliate_id=17305270177&sub_id=huong"
+                # Lọc và thêm tham số cần thiết
+                filtered_params = filter_unwanted_parameters(final_url_with_params)
+                result_link = f"https://shope.ee/an_redir?origin_link={origin_link}{filtered_params}&affiliate_id=17305270177&sub_id=huong"
                 
             converted_message.append(result_link)
     
