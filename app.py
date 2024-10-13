@@ -4,38 +4,45 @@ import os
 
 app = Flask(__name__)
 
+# Token bot Telegram của bạn
+TELEGRAM_BOT_TOKEN = '7628217923:AAE1nGUDGxhPLmVr0fYyAcz7b88N8LOsMZ0'
+TELEGRAM_API_URL = f'https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/'
+
 @app.route('/webhook', methods=['POST'])
 def webhook():
     data = request.get_json()
-    
-    # Kiểm tra xem tin nhắn có trong dữ liệu hay không
-    if 'message' in data and 'text' in data['message']:
-        user_message = data['message']['text']
-        print(f"Received message: {user_message}")  # Ghi lại tin nhắn nhận được
-        
-        # Kiểm tra nếu tin nhắn có liên kết Lazada
-        if "lazada" in user_message:
-            expanded_link = expand_lazada_link(user_message)
-            print(f"Expanded link: {expanded_link}")  # Ghi lại liên kết mở rộng
-            return jsonify({"text": f"Expanded link: {expanded_link}"}), 200
 
-    return jsonify({"text": "No valid Lazada link found."}), 200
+    # Kiểm tra nếu không có dữ liệu
+    if 'message' not in data:
+        return jsonify({"error": "No message found"}), 400
 
-def expand_lazada_link(short_link):
+    chat_id = data['message']['chat']['id']
+    text = data['message'].get('text', '')
+
+    # Kiểm tra nếu tin nhắn chứa link ngắn
+    if 'lazada.vn' in text:
+        long_link = expand_link(text)
+        send_message(chat_id, long_link)
+    else:
+        send_message(chat_id, "Vui lòng gửi link Lazada ngắn để chuyển đổi.")
+
+    return jsonify({"status": "success"}), 200
+
+def expand_link(short_url):
     try:
-        # Gửi yêu cầu GET đến liên kết ngắn
-        response = requests.get(short_link, allow_redirects=True, timeout=10)
-        
-        # Kiểm tra nếu có redirect
-        if response.history:
-            # Trả về URL cuối cùng sau tất cả các redirect
-            return response.url
+        response = requests.get(short_url, allow_redirects=False)
+        # Lấy URL đầy đủ từ phản hồi
+        if response.status_code == 302:
+            return response.headers['Location']
         else:
-            # Nếu không có redirect, trả về liên kết ngắn ban đầu
-            return short_link
-    except requests.RequestException as e:
-        print(f"Error expanding link: {e}")
-        return short_link
+            return "Không thể mở rộng liên kết."
+    except Exception as e:
+        return f"Lỗi: {str(e)}"
+
+def send_message(chat_id, text):
+    url = TELEGRAM_API_URL + 'sendMessage'
+    payload = {'chat_id': chat_id, 'text': text}
+    requests.post(url, json=payload)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    app.run(debug=True)
