@@ -70,10 +70,11 @@ def process_links(message):
     converted_message = []
     
     for part in parts:
-        # Nếu người dùng nhập thiếu "http://" hoặc "https://", bot sẽ tự động thêm
-        if not part.startswith("http://") and not part.startswith("https://"):
-            if part.startswith("s.shopee.vn") or part.startswith("shope.ee"):
-                part = "https://" + part
+        # Tự động thêm tiền tố https:// nếu thiếu
+        if part.startswith("s.shopee.vn") or part.startswith("shope.ee"):
+            part = "https://" + part
+        elif part.startswith("http://s.shopee.vn") or part.startswith("http://shope.ee"):
+            part = part.replace("http://", "https://")
 
         # Nếu không phải là liên kết hợp lệ của Shopee
         if not (part.startswith("https://s.shopee.vn") or part.startswith("https://shope.ee")):
