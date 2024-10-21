@@ -5,8 +5,8 @@ from bs4 import BeautifulSoup
 from telegram import Bot
 
 # Token từ BotFather và ID nhóm Telegram để gửi thông báo
-TOKEN = 'YOUR_BOT_TOKEN'
-GROUP_CHAT_ID = 'YOUR_GROUP_CHAT_ID'  # ID nhóm Telegram để gửi thông báo
+TOKEN = '7628217923:AAE1nGUDGxhPLmVr0fYyAcz7b88N8LOsMZ0'
+GROUP_CHAT_ID = 'https://t.me/thutele1234'  # ID nhóm Telegram để gửi thông báo
 
 # Hàm lấy danh sách các shop ngẫu nhiên từ Shopee Mall
 def get_random_shop():
