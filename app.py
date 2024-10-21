@@ -6,7 +6,7 @@ from telegram import Bot
 
 # Token từ BotFather và ID nhóm Telegram để gửi thông báo
 TOKEN = '7628217923:AAE1nGUDGxhPLmVr0fYyAcz7b88N8LOsMZ0'
-GROUP_CHAT_ID = 'https://t.me/thutele1234'  # ID nhóm Telegram để gửi thông báo
+GROUP_CHAT_ID = '@thutele1234'  # ID nhóm Telegram để gửi thông báo (sử dụng alias @ hoặc chat_id)
 
 # Hàm lấy danh sách các shop ngẫu nhiên từ Shopee Mall
 def get_random_shop():
