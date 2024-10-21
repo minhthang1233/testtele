@@ -1,99 +1,91 @@
-from flask import Flask, request, jsonify
+import time
 import requests
-import os
+import random
+from bs4 import BeautifulSoup
+from telegram import Bot
 
-app = Flask(__name__)
+# Token từ BotFather và ID nhóm Telegram để gửi thông báo
+TOKEN = 'YOUR_BOT_TOKEN'
+GROUP_CHAT_ID = 'YOUR_GROUP_CHAT_ID'  # ID nhóm Telegram để gửi thông báo
 
-# Hàm xử lý webhook
-@app.route('/webhook', methods=['POST'])
-def webhook():
-    update = request.get_json()
-    
-    # Kiểm tra xem có tin nhắn mới không
-    if 'message' in update:
-        chat_id = update['message']['chat']['id']
-        message_text = update['message'].get('text', '')
-
-        # Gọi hàm để xử lý liên kết
-        response_text = process_links(message_text)
-
-        # Gửi phản hồi về Telegram
-        send_message(chat_id, response_text)
-
-    return jsonify({"status": "ok"})
-
-# Hàm gửi tin nhắn đến bot Telegram
-def send_message(chat_id, text):
-    url = f"https://api.telegram.org/bot7628217923:AAE1nGUDGxhPLmVr0fYyAcz7b88N8LOsMZ0/sendMessage"
-    payload = {
-        "chat_id": chat_id,
-        "text": text
+# Hàm lấy danh sách các shop ngẫu nhiên từ Shopee Mall
+def get_random_shop():
+    headers = {
+        'User-Agent': 'Mozilla/5.0'
     }
-    requests.post(url, json=payload)
-
-# Hàm lấy link cuối cùng từ URL
-def get_final_link(link):
+    
+    # URL của Shopee Mall hoặc trang danh sách shop
+    mall_url = 'https://shopee.vn/mall'
+    
     try:
-        # Gửi yêu cầu để lấy link cuối
-        response = requests.get(link, allow_redirects=True)
-        return response.url  # Trả về link cuối cùng
-    except requests.exceptions.RequestException as e:
-        return str(e)  # Trả về lỗi nếu có
-
-# Hàm lọc các tham số không mong muốn
-def filter_unwanted_parameters(url):
-    # Chỉ giữ lại tham số utm_source
-    allowed_params = [
-        "utm_source"
-    ]
-    
-    url_parts = url.split('?')
-    
-    if len(url_parts) < 2:
-        return url  # Không có tham số thì trả về nguyên URL
-    
-    base_url = url_parts[0]
-    params = url_parts[1].split('&')
-    
-    # Chỉ giữ lại các tham số được phép
-    filtered_params = [param for param in params if any(param.startswith(allowed) for allowed in allowed_params)]
-    
-    # Tạo lại URL
-    if filtered_params:
-        return f"?{'&'.join(filtered_params)}"
-    else:
-        return ""  # Nếu không còn tham số nào, trả về rỗng
-
-# Hàm xử lý nhiều liên kết
-def process_links(message):
-    parts = message.split(" ")
-    converted_message = []
-    
-    for part in parts:
-        # Nếu không phải là liên kết bắt đầu bằng s.shopee.vn hoặc shope.ee
-        if not (part.startswith("https://s.shopee.vn") or part.startswith("https://shope.ee")):
-            converted_message.append(part)
+        response = requests.get(mall_url, headers=headers)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # Tìm các thẻ chứa thông tin shop (dựa trên cấu trúc HTML của trang)
+        shops = soup.find_all('a', class_='shop-link')  # Điều chỉnh class CSS cho đúng
+        
+        if shops:
+            # Chọn ngẫu nhiên một shop từ danh sách
+            random_shop = random.choice(shops)
+            shop_url = 'https://shopee.vn' + random_shop['href']
+            return shop_url
         else:
-            # Lấy link cuối cùng
-            final_url = get_final_link(part)
-            origin_link = final_url.split("?")[0]  # Bỏ đi các tham số sau '?'
-            
-            # Trả về link shope.ee với định dạng yêu cầu và loại bỏ tham số không mong muốn
-            filtered_params = filter_unwanted_parameters(final_url)  # Lọc các tham số không mong muốn
-            
-            # Kiểm tra xem final_url có chứa 'error_page' hay không
-            if 'error_page' in final_url:
-                result_link = f"https://shope.ee/an_redir?origin_link={origin_link}&affiliate_id=17305270177&sub_id=huong"
-            else:
-                result_link = f"https://shope.ee/an_redir?origin_link={origin_link}{filtered_params}&affiliate_id=17305270177&sub_id=huong"
-            
-            converted_message.append(result_link)
+            return None
+    except Exception as e:
+        print(f"Lỗi khi truy cập Shopee Mall: {e}")
+        return None
+
+# Hàm để truy cập vào shop Shopee và tìm kiếm mã giảm giá
+def search_shopee_shop(shop_url):
+    headers = {
+        'User-Agent': 'Mozilla/5.0'
+    }
     
-    # Nếu không có liên kết hợp lệ
-    if not any(link.startswith("https://s.shopee.vn") or link.startswith("https://shope.ee") for link in parts):
-        return "Vui lòng nhập link bắt đầu bằng s.shopee.vn hoặc shope.ee. Những link khác gửi thẳng vào nhóm => https://zalo.me/g/rycduw016"
+    try:
+        response = requests.get(shop_url, headers=headers)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # Lọc mã giảm giá từ trang shop (cần kiểm tra cấu trúc cụ thể của Shopee)
+        discount_section = soup.find_all('div', class_='discount-info')  # Điều chỉnh class CSS cho đúng
+        discount_links = []
+        
+        for discount in discount_section:
+            code = discount.find('span', class_='discount-code').text
+            link = discount.find('a', href=True)['href']
+            discount_links.append(f"Mã: {code}, Link: {link}")
+        
+        return discount_links
+    except Exception as e:
+        print(f"Lỗi khi truy cập shop {shop_url}: {e}")
+        return []
+
+# Hàm gửi thông báo về các mã giảm giá tìm được
+def send_discount_message(bot, chat_id, shop_url, discounts):
+    message = f"Mã giảm giá từ shop {shop_url}:\n" + "\n".join(discounts)
+    bot.send_message(chat_id=chat_id, text=message)
+
+# Hàm chính để lấy shop ngẫu nhiên và tìm mã giảm giá
+def main():
+    bot = Bot(token=TOKEN)
     
-    return " ".join(converted_message)
+    found_discounts = set()
+    
+    while True:
+        shop_url = get_random_shop()  # Lấy shop ngẫu nhiên từ Shopee Mall
+        
+        if shop_url:
+            print(f"Đang kiểm tra shop: {shop_url}")
+            discounts = search_shopee_shop(shop_url)
+            
+            if discounts:
+                # Kiểm tra nếu mã giảm giá mới chưa được gửi
+                discount_hash = tuple(discounts)
+                if discount_hash not in found_discounts:
+                    found_discounts.add(discount_hash)
+                    send_discount_message(bot, GROUP_CHAT_ID, shop_url, discounts)
+        
+        # Chờ một khoảng thời gian trước khi kiểm tra lại (ví dụ 30 phút)
+        time.sleep(1800)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    main()
